@@ -51,6 +51,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: boot-buzeasy-hosting
-          path: bot/boot-buzeasy-hosting.zip
+          path: ../boot-buzeasy-hosting.zip
           if-no-files-found: error
           retention-days: 14
