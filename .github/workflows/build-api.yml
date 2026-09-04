@@ -1,0 +1,56 @@
+name: Build Laravel API - Shared Hosting
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'api/**'
+      - '.github/workflows/build-api.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, bcmath, curl, fileinfo, openssl, pdo, pdo_mysql, tokenizer, xml, ctype, json
+          tools: composer:v2
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+
+      - name: Prepare hosting package
+        run: |
+          rm -rf .git .github tests
+          rm -f .env
+          rm -f database/*.sqlite
+          rm -rf storage/logs/* storage/framework/cache/data/* storage/framework/sessions/* storage/framework/views/*
+          zip -qr ../api-buzeasy-hosting.zip . -x 'node_modules/*' 'public/build/*'
+
+      - name: Verify package
+        run: |
+          test -f ../api-buzeasy-hosting.zip
+          test -f artisan
+          test -f public/index.php
+          test -d vendor
+          unzip -l ../api-buzeasy-hosting.zip | grep -q 'vendor/autoload.php'
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-buzeasy-hosting
+          path: api/api-buzeasy-hosting.zip
+          if-no-files-found: error
+          retention-days: 14
