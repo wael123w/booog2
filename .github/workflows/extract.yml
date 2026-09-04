@@ -4,9 +4,11 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - '*.zip'
-      - '**/*.zip'
+      - 'Crypto Coin Tap-2-Earn.zip'
       - '.github/workflows/extract.yml'
+
+permissions:
+  contents: write
 
 jobs:
   extract:
@@ -14,44 +16,44 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Find and extract ZIP
+      - name: Extract ZIP into repository root
         shell: bash
         run: |
           set -euo pipefail
-          ZIP_FILE=$(find . -type f -iname '*.zip' -not -path './.git/*' | head -n 1)
-          if [ -z "${ZIP_FILE:-}" ]; then
-            echo 'No ZIP file found.'
-            exit 1
+          ZIP_FILE="Crypto Coin Tap-2-Earn.zip"
+          test -f "$ZIP_FILE"
+          mkdir -p .extract_tmp
+          unzip -q -o "$ZIP_FILE" -d .extract_tmp
+
+          # If the archive contains one top-level directory, use its contents.
+          shopt -s dotglob nullglob
+          items=(.extract_tmp/*)
+          if [ "${#items[@]}" -eq 1 ] && [ -d "${items[0]}" ]; then
+            cp -a "${items[0]}"/. ./
+          else
+            cp -a .extract_tmp/. ./
           fi
-          echo "Using: $ZIP_FILE"
-          rm -rf extracted
-          mkdir -p extracted
-          unzip -q "$ZIP_FILE" -d extracted
-          echo 'Extracted files:'
-          find extracted -maxdepth 3 -type f | head -200
 
-      - name: Create ready ZIP
+          rm -rf .extract_tmp
+          echo 'Repository files after extraction:'
+          find . -maxdepth 3 -type f -not -path './.git/*' | sort | head -300
+
+      - name: Remove ZIP from repository
+        run: rm -f "Crypto Coin Tap-2-Earn.zip"
+
+      - name: Commit extracted files
         shell: bash
         run: |
           set -euo pipefail
-          cd extracted
-          zip -qr ../crypto-coin-ready.zip .
-          cd ..
-          ls -lh crypto-coin-ready.zip
-
-      - name: Upload extracted files as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: crypto-coin-extracted
-          path: extracted/
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Upload ready ZIP as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: crypto-coin-ready
-          path: crypto-coin-ready.zip
-          if-no-files-found: error
-          retention-days: 7
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'No changes to commit.'
+            exit 0
+          fi
+          git commit -m "Extract Crypto Coin Tap-2-Earn into repository"
+          git push
