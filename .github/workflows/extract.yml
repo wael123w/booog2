@@ -1,0 +1,57 @@
+name: Extract Crypto Coin ZIP
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '*.zip'
+      - '**/*.zip'
+      - '.github/workflows/extract.yml'
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Find and extract ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP_FILE=$(find . -type f -iname '*.zip' -not -path './.git/*' | head -n 1)
+          if [ -z "${ZIP_FILE:-}" ]; then
+            echo 'No ZIP file found.'
+            exit 1
+          fi
+          echo "Using: $ZIP_FILE"
+          rm -rf extracted
+          mkdir -p extracted
+          unzip -q "$ZIP_FILE" -d extracted
+          echo 'Extracted files:'
+          find extracted -maxdepth 3 -type f | head -200
+
+      - name: Create ready ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd extracted
+          zip -qr ../crypto-coin-ready.zip .
+          cd ..
+          ls -lh crypto-coin-ready.zip
+
+      - name: Upload extracted files as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: crypto-coin-extracted
+          path: extracted/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload ready ZIP as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: crypto-coin-ready
+          path: crypto-coin-ready.zip
+          if-no-files-found: error
+          retention-days: 7
