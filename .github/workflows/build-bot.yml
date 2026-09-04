@@ -19,38 +19,31 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
           cache-dependency-path: bot/package-lock.json
-
       - name: Install dependencies
         run: npm ci
-
       - name: Build TypeScript bot
         run: npm run build
-
       - name: Remove development dependencies
         run: npm prune --omit=dev
-
       - name: Prepare hosting package
         run: |
           rm -rf .git
           rm -f .env
-          zip -qr ../boot-buzeasy-hosting.zip dist node_modules package.json package-lock.json .env.example
-
+          zip -qr boot-buzeasy-hosting.zip dist node_modules package.json package-lock.json .env.example
       - name: Verify package
         run: |
           test -f dist/index.js
-          test -f ../boot-buzeasy-hosting.zip
-
+          test -f boot-buzeasy-hosting.zip
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: boot-buzeasy-hosting
-          path: ../boot-buzeasy-hosting.zip
+          path: bot/boot-buzeasy-hosting.zip
           if-no-files-found: error
           retention-days: 14
