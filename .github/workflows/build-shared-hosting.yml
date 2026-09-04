@@ -1,0 +1,59 @@
+name: Build for Shared Hosting
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'Tap-2-Earn/**'
+      - '.github/workflows/build-shared-hosting.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Tap-2-Earn
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: Tap-2-Earn/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Production build
+        run: npm run build
+        env:
+          VITE_APP_URL: ${{ vars.VITE_APP_URL }}
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_BOT_URL: ${{ vars.VITE_BOT_URL }}
+
+      - name: Verify build
+        run: |
+          test -f dist/index.html
+          echo "Production build created successfully."
+          du -sh dist
+
+      - name: Package shared-hosting files
+        run: |
+          cd dist
+          zip -qr ../tap-2-earn-shared-hosting.zip .
+          cd ..
+          ls -lh tap-2-earn-shared-hosting.zip
+
+      - name: Upload production artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tap-2-earn-shared-hosting
+          path: Tap-2-Earn/tap-2-earn-shared-hosting.zip
+          if-no-files-found: error
+          retention-days: 14
