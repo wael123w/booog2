@@ -1,0 +1,52 @@
+name: Build Frontend - Shared Hosting
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'Tap-2-Earn/**'
+      - '.github/workflows/build-frontend.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Tap-2-Earn
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: Tap-2-Earn/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production frontend
+        run: npm run build
+        env:
+          VITE_APP_URL: https://gaamee.buzeasy.net
+          VITE_API_URL: https://api.buzeasy.net
+          VITE_BOT_URL: https://boot.buzeasy.net
+
+      - name: Verify
+        run: test -f dist/index.html
+
+      - name: Package
+        run: cd dist && zip -qr ../gaamee-buzeasy-hosting.zip .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gaamee-buzeasy-hosting
+          path: Tap-2-Earn/gaamee-buzeasy-hosting.zip
+          if-no-files-found: error
+          retention-days: 14
